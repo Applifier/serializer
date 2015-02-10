@@ -17,6 +17,7 @@ import (
 	"strings"
 )
 
+// SecureSerializer holds EncryptKey and ValidateKey
 type SecureSerializer struct {
 	EncryptKey  []byte
 	ValidateKey []byte
@@ -86,6 +87,7 @@ func pKCS5UnPadding(src []byte) []byte {
 	return src[:(length - unpadding)]
 }
 
+// Stringify serializes and encrypts interface{} given as argument and returns encrypted data as a string or an possible error
 func (serializer *SecureSerializer) Stringify(obj interface{}) (string, error) {
 	jsonData, err := json.Marshal(obj)
 
@@ -133,6 +135,7 @@ func (serializer *SecureSerializer) Stringify(obj interface{}) (string, error) {
 		hex.EncodeToString(encrypted)), nil
 }
 
+// Parse deserializes and decrypts encrypted data (returned by Stringify) to a pointer
 func (serializer *SecureSerializer) Parse(base64data string, obj interface{}) error {
 	expectedDigest := base64data[0:28]
 	nonceCrypt := base64data[28:36]
@@ -173,16 +176,19 @@ func (serializer *SecureSerializer) Parse(base64data string, obj interface{}) er
 	return json.Unmarshal(encryptedData[8:], obj)
 }
 
+// NewSecureSerializer creates new serializer instance with encrypt key and validate key
 func NewSecureSerializer(encryptKey []byte, validateKey []byte) *SecureSerializer {
 	serializer := &SecureSerializer{encryptKey, validateKey}
 	return serializer
 }
 
+// SecureStringify is a shorthand for serializer := NewSecureSerializer(...) encryptedData := serializer.Stringify(...)
 func SecureStringify(obj interface{}, encryptKey []byte, validateKey []byte) (string, error) {
 	serializer := NewSecureSerializer(encryptKey, validateKey)
 	return serializer.Stringify(obj)
 }
 
+// SecureParse is a shorthand for serializer := NewSecureSerializer(...) serializer.Parse(...)
 func SecureParse(data string, obj interface{}, encryptKey []byte, validateKey []byte) error {
 	serializer := NewSecureSerializer(encryptKey, validateKey)
 	return serializer.Parse(data, obj)
