@@ -136,10 +136,10 @@ func (serializer *SecureSerializer) Stringify(obj interface{}) (string, error) {
 }
 
 // Parse deserializes and decrypts encrypted data (returned by Stringify) to a pointer
-func (serializer *SecureSerializer) Parse(base64data string, obj interface{}) error {
-	expectedDigest := base64data[0:28]
-	nonceCrypt := base64data[28:36]
-	encryptedDataHex := base64data[36:]
+func (serializer *SecureSerializer) Parse(serializedData string, obj interface{}) error {
+	expectedDigest := serializedData[0:28]
+	nonceCrypt := serializedData[28:36]
+	encryptedDataHex := serializedData[36:]
 
 	password := append(serializer.EncryptKey, nonceCrypt[:]...)
 	key := evpBytesToKey(string(password), 48)
