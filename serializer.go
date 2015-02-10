@@ -1,6 +1,7 @@
 package serializer
 
 import (
+	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/hmac"
@@ -73,6 +74,18 @@ func sign(data, key []byte) []byte {
 	return mac.Sum(nil)
 }
 
+func pKCS5Padding(src []byte, blockSize int) []byte {
+	padding := blockSize - len(src)%blockSize
+	padtext := bytes.Repeat([]byte{byte(padding)}, padding)
+	return append(src, padtext...)
+}
+
+func pKCS5UnPadding(src []byte) []byte {
+	length := len(src)
+	unpadding := int(src[length-1])
+	return src[:(length - unpadding)]
+}
+
 func (serializer *SecureSerializer) Stringify(obj interface{}) (string, error) {
 	jsonData, err := json.Marshal(obj)
 
@@ -100,10 +113,13 @@ func (serializer *SecureSerializer) Stringify(obj interface{}) (string, error) {
 
 	iv := key[32:]
 
-	encrypter := cipher.NewCFBEncrypter(block, iv)
+	encrypter := cipher.NewCBCEncrypter(block, iv)
 
-	encrypted := make([]byte, len(nonceCheck)+len(jsonData))
-	encrypter.XORKeyStream(encrypted, append(nonceCheck, jsonData[:]...))
+	dataToEncrypt := pKCS5Padding(append(nonceCheck, jsonData[:]...), aes.BlockSize)
+
+	encrypted := make([]byte, len(dataToEncrypt))
+
+	encrypter.CryptBlocks(encrypted, dataToEncrypt)
 
 	digest := sign(jsonData, append(serializer.ValidateKey, nonceCheck[:]...))
 
@@ -132,19 +148,20 @@ func (serializer *SecureSerializer) Parse(base64data string, obj interface{}) er
 
 	iv := key[32:]
 
-	decrypter := cipher.NewCFBDecrypter(block, iv)
+	decrypter := cipher.NewCBCDecrypter(block, iv)
 
 	encryptedData, err := hex.DecodeString(encryptedDataHex)
 	if err != nil {
 		return err
 	}
 
-	decrypted := make([]byte, len(encryptedData))
-	decrypter.XORKeyStream(decrypted, encryptedData)
+	decrypter.CryptBlocks(encryptedData, encryptedData)
 
-	nonceCheck := decrypted[0:8]
+	encryptedData = pKCS5UnPadding(encryptedData)
 
-	digest := sign(decrypted[8:], append(serializer.ValidateKey, nonceCheck[:]...))
+	nonceCheck := encryptedData[:8]
+
+	digest := sign(encryptedData[8:], append(serializer.ValidateKey, nonceCheck[:]...))
 	digestBase64 := base64.StdEncoding.EncodeToString(digest)
 	digestBase64 = strings.Replace(digestBase64, "+", "-", -1)
 	digestBase64 = strings.Replace(digestBase64, "/", "_", -1)
@@ -153,7 +170,7 @@ func (serializer *SecureSerializer) Parse(base64data string, obj interface{}) er
 		return errors.New("Bad digest")
 	}
 
-	return json.Unmarshal(decrypted[8:], obj)
+	return json.Unmarshal(encryptedData[8:], obj)
 }
 
 func NewSecureSerializer(encryptKey []byte, validateKey []byte) *SecureSerializer {
