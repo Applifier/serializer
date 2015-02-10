@@ -105,8 +105,7 @@ func (serializer *SecureSerializer) Stringify(obj interface{}) (string, error) {
 		return "", err
 	}
 
-	password := append(serializer.EncryptKey, nonceCrypt...)
-	key := evpBytesToKey(password, 48)
+	key := evpBytesToKey(append(serializer.EncryptKey, nonceCrypt...), 48)
 
 	block, err := aes.NewCipher(key[:32])
 	if err != nil {
@@ -141,8 +140,7 @@ func (serializer *SecureSerializer) Parse(serializedData string, obj interface{}
 	nonceCrypt := serializedData[28:36]
 	encryptedDataHex := serializedData[36:]
 
-	password := append(serializer.EncryptKey, nonceCrypt...)
-	key := evpBytesToKey(password, 48)
+	key := evpBytesToKey(append(serializer.EncryptKey, nonceCrypt...), 48)
 
 	block, err := aes.NewCipher(key[:32])
 	if err != nil {

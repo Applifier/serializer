@@ -119,22 +119,20 @@ func TestSecureSerializerWithEncryptedDataFromNodeSerializer(t *testing.T) {
 	}
 }
 
+var data = map[string]interface{}{
+	"foo": "bar",
+}
+
+var encryptedData, _ = serializer.Stringify(data)
+
 func BenchmarkStringify(b *testing.B) {
 
-	var data = map[string]interface{}{
-		"foo": "bar",
-	}
 	for n := 0; n < b.N; n++ {
 		serializer.Stringify(data)
 	}
 }
 
 func BenchmarkParse(b *testing.B) {
-	var data = map[string]interface{}{
-		"foo": "bar",
-	}
-	encryptedData, _ := serializer.Stringify(data)
-
 	for n := 0; n < b.N; n++ {
 		serializer.Stringify(encryptedData)
 	}
@@ -144,7 +142,7 @@ func BenchmarkStringifyParse(b *testing.B) {
 	val := make(map[string]interface{})
 	val["foo"] = "bar"
 	var data map[string]interface{}
-
+	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
 		encrypted, _ := serializer.Stringify(val)
 		serializer.Parse(encrypted, &data)
