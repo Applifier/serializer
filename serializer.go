@@ -29,12 +29,12 @@ func md5sum(d []byte) []byte {
 	return h.Sum(nil)
 }
 
-func evpBytesToKey(password string, keyLen int) (key []byte) {
+func evpBytesToKey(password []byte, keyLen int) (key []byte) {
 	const md5Len = 16
 
 	cnt := (keyLen-1)/md5Len + 1
 	m := make([]byte, cnt*md5Len)
-	copy(m, md5sum([]byte(password)))
+	copy(m, md5sum(password))
 
 	// Repeatedly call md5 until bytes generated is enough.
 	// Each call to md5 uses data: prev md5 sum + password.
@@ -105,8 +105,8 @@ func (serializer *SecureSerializer) Stringify(obj interface{}) (string, error) {
 		return "", err
 	}
 
-	password := append(serializer.EncryptKey, nonceCrypt[:]...)
-	key := evpBytesToKey(string(password), 48)
+	password := append(serializer.EncryptKey, nonceCrypt...)
+	key := evpBytesToKey(password, 48)
 
 	block, err := aes.NewCipher(key[:32])
 	if err != nil {
@@ -117,13 +117,13 @@ func (serializer *SecureSerializer) Stringify(obj interface{}) (string, error) {
 
 	encrypter := cipher.NewCBCEncrypter(block, iv)
 
-	dataToEncrypt := pKCS5Padding(append(nonceCheck, jsonData[:]...), aes.BlockSize)
+	dataToEncrypt := pKCS5Padding(append(nonceCheck, jsonData...), aes.BlockSize)
 
 	encrypted := make([]byte, len(dataToEncrypt))
 
 	encrypter.CryptBlocks(encrypted, dataToEncrypt)
 
-	digest := sign(jsonData, append(serializer.ValidateKey, nonceCheck[:]...))
+	digest := sign(jsonData, append(serializer.ValidateKey, nonceCheck...))
 
 	digestBase64 := base64.StdEncoding.EncodeToString(digest)
 	digestBase64 = strings.Replace(digestBase64, "+", "-", -1)
@@ -141,8 +141,8 @@ func (serializer *SecureSerializer) Parse(serializedData string, obj interface{}
 	nonceCrypt := serializedData[28:36]
 	encryptedDataHex := serializedData[36:]
 
-	password := append(serializer.EncryptKey, nonceCrypt[:]...)
-	key := evpBytesToKey(string(password), 48)
+	password := append(serializer.EncryptKey, nonceCrypt...)
+	key := evpBytesToKey(password, 48)
 
 	block, err := aes.NewCipher(key[:32])
 	if err != nil {
@@ -164,7 +164,7 @@ func (serializer *SecureSerializer) Parse(serializedData string, obj interface{}
 
 	nonceCheck := encryptedData[:8]
 
-	digest := sign(encryptedData[8:], append(serializer.ValidateKey, nonceCheck[:]...))
+	digest := sign(encryptedData[8:], append(serializer.ValidateKey, nonceCheck...))
 	digestBase64 := base64.StdEncoding.EncodeToString(digest)
 	digestBase64 = strings.Replace(digestBase64, "+", "-", -1)
 	digestBase64 = strings.Replace(digestBase64, "/", "_", -1)
