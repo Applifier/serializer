@@ -136,6 +136,10 @@ func (serializer *SecureSerializer) Stringify(obj interface{}) (string, error) {
 
 // Parse deserializes and decrypts encrypted data (returned by Stringify) to a pointer
 func (serializer *SecureSerializer) Parse(serializedData string, obj interface{}) error {
+	if len(serializedData) < 36 {
+		return errors.New("Bad input")
+	}
+
 	expectedDigest := serializedData[0:28]
 	nonceCrypt := serializedData[28:36]
 	encryptedDataHex := serializedData[36:]

@@ -119,6 +119,15 @@ func TestSecureSerializerWithEncryptedDataFromNodeSerializer(t *testing.T) {
 	}
 }
 
+func TestParseShouldReturnErrorOnEmptyString(t *testing.T) {
+	err := serializer.Parse("", nil)
+
+	if err == nil {
+		t.Error("No error returned")
+		return
+	}
+}
+
 var data = map[string]interface{}{
 	"foo": "bar",
 }
