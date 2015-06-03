@@ -84,6 +84,9 @@ func pKCS5Padding(src []byte, blockSize int) []byte {
 func pKCS5UnPadding(src []byte) []byte {
 	length := len(src)
 	unpadding := int(src[length-1])
+	if length-unpadding < 0 || length-unpadding > len(src) {
+		return nil
+	}
 	return src[:(length - unpadding)]
 }
 
@@ -163,7 +166,9 @@ func (serializer *SecureSerializer) Parse(serializedData string, obj interface{}
 	decrypter.CryptBlocks(encryptedData, encryptedData)
 
 	encryptedData = pKCS5UnPadding(encryptedData)
-
+	if encryptedData == nil {
+		return errors.New("Invalid pKCS5")
+	}
 	nonceCheck := encryptedData[:8]
 
 	digest := sign(encryptedData[8:], append(serializer.ValidateKey, nonceCheck...))
