@@ -2,7 +2,7 @@ package serializer
 
 import "fmt"
 
-func ExampleUsage() {
+func ExampleNewSecureSerializer() {
 	serializer := NewSecureSerializer([]byte("somesecretkey"), []byte("anothersecretstring"))
 
 	data := map[string]string{
