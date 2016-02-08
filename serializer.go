@@ -108,7 +108,10 @@ func (serializer *SecureSerializer) Stringify(obj interface{}) (string, error) {
 		return "", err
 	}
 
-	key := evpBytesToKey(append(serializer.EncryptKey, nonceCrypt...), 48)
+	evpBytes := make([]byte, len(serializer.EncryptKey)+len(nonceCrypt))
+	copy(evpBytes, serializer.EncryptKey)
+	copy(evpBytes[len(serializer.EncryptKey):], nonceCrypt)
+	key := evpBytesToKey(evpBytes, 48)
 
 	block, err := aes.NewCipher(key[:32])
 	if err != nil {
@@ -119,13 +122,13 @@ func (serializer *SecureSerializer) Stringify(obj interface{}) (string, error) {
 
 	encrypter := cipher.NewCBCEncrypter(block, iv)
 
-	dataToEncrypt := pKCS5Padding(append(nonceCheck, jsonData...), aes.BlockSize)
+	dataToEncrypt := pKCS5Padding(bytes.Join([][]byte{nonceCheck, jsonData}, []byte{}), aes.BlockSize)
 
 	encrypted := make([]byte, len(dataToEncrypt))
 
 	encrypter.CryptBlocks(encrypted, dataToEncrypt)
 
-	digest := sign(jsonData, append(serializer.ValidateKey, nonceCheck...))
+	digest := sign(jsonData, bytes.Join([][]byte{serializer.ValidateKey, nonceCheck}, []byte{}))
 
 	digestBase64 := base64.StdEncoding.EncodeToString(digest)
 	digestBase64 = strings.Replace(digestBase64, "+", "-", -1)
@@ -147,7 +150,11 @@ func (serializer *SecureSerializer) Parse(serializedData string, obj interface{}
 	nonceCrypt := serializedData[28:36]
 	encryptedDataHex := serializedData[36:]
 
-	key := evpBytesToKey(append(serializer.EncryptKey, nonceCrypt...), 48)
+	evpBytes := make([]byte, len(serializer.EncryptKey)+len(nonceCrypt))
+	copy(evpBytes, serializer.EncryptKey)
+	copy(evpBytes[len(serializer.EncryptKey):], nonceCrypt)
+
+	key := evpBytesToKey(evpBytes, 48)
 
 	block, err := aes.NewCipher(key[:32])
 	if err != nil {
@@ -171,7 +178,7 @@ func (serializer *SecureSerializer) Parse(serializedData string, obj interface{}
 	}
 	nonceCheck := encryptedData[:8]
 
-	digest := sign(encryptedData[8:], append(serializer.ValidateKey, nonceCheck...))
+	digest := sign(encryptedData[8:], bytes.Join([][]byte{serializer.ValidateKey, nonceCheck}, []byte{}))
 	digestBase64 := base64.StdEncoding.EncodeToString(digest)
 	digestBase64 = strings.Replace(digestBase64, "+", "-", -1)
 	digestBase64 = strings.Replace(digestBase64, "/", "_", -1)

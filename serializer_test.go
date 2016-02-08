@@ -143,8 +143,24 @@ func BenchmarkStringify(b *testing.B) {
 
 func BenchmarkParse(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		serializer.Stringify(encryptedData)
+		var data map[string]interface{}
+		err := serializer.Parse(encryptedData, &data)
+		if err != nil {
+			b.Error(err)
+		}
 	}
+}
+
+func BenchmarkParseParallel(b *testing.B) {
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			var data map[string]interface{}
+			err := serializer.Parse(encryptedData, &data)
+			if err != nil {
+				b.Error(err)
+			}
+		}
+	})
 }
 
 func BenchmarkStringifyParse(b *testing.B) {
@@ -154,6 +170,9 @@ func BenchmarkStringifyParse(b *testing.B) {
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
 		encrypted, _ := serializer.Stringify(val)
-		serializer.Parse(encrypted, &data)
+		err := serializer.Parse(encrypted, &data)
+		if err != nil {
+			b.Error(err)
+		}
 	}
 }
