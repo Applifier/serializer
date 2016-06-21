@@ -128,6 +128,15 @@ func TestParseShouldReturnErrorOnEmptyString(t *testing.T) {
 	}
 }
 
+func TestParseCyptoBlocksRecover(t *testing.T) {
+	badToken := `LwTUfzIlfef1395e03230974824b6643ed3ace515d5090a4498b8a9cdeefb6157a92b5e3b0bd8a4f6711e41a736c0589d42d84a230b139e3aef755da35315d06ee20d03a89aecec03f0461a68c3794bcffba89150a3920af5c6901fcbd72d0fd360abb500fbc102db9f1bfef939c5e4df49fab9f6ae765fcefe8d5c9dc0616e131ee253fa210595c05146a9cc66bc3f359f2f1fa513723015234f632f30f3f7a9a5df1e97c0fa3c202d0bc38b5ccad02219fc0d71104a2824825506ffe21bd8c380f87a74baca2e47f35ff58dd35ba22b3bab627661d53a38b6a321c421a0208d47a0b6b3532a2bee671e480f6f9acd8fe014ad563653cde79c6b53af4ac738ce90ff44a752c92b0b5144eecc7464031972a1c0d1d36289a3b3da902d17eaff6fdabf611aeead3485ba83f1f79884a91f2a911cd`
+	err := serializer.Parse(badToken, nil)
+
+	if err == nil {
+		t.Error("No error recovered & returned")
+	}
+}
+
 var data = map[string]interface{}{
 	"foo": "bar",
 }
