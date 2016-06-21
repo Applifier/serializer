@@ -141,10 +141,21 @@ func (serializer *SecureSerializer) Stringify(obj interface{}) (string, error) {
 }
 
 // Parse deserializes and decrypts encrypted data (returned by Stringify) to a pointer
-func (serializer *SecureSerializer) Parse(serializedData string, obj interface{}) error {
+func (serializer *SecureSerializer) Parse(serializedData string, obj interface{}) (err error) {
 	if len(serializedData) < 36 {
 		return errors.New("Bad input")
 	}
+	// Recover from panic originating from CryptBlocks on invalid data
+	// fixed in go 1.7
+	defer func() {
+		if r := recover(); r != nil {
+			var ok bool
+			err, ok = r.(error)
+			if !ok {
+				err = fmt.Errorf("pkg: %v", r)
+			}
+		}
+	}()
 
 	expectedDigest := serializedData[0:28]
 	nonceCrypt := serializedData[28:36]
@@ -158,7 +169,7 @@ func (serializer *SecureSerializer) Parse(serializedData string, obj interface{}
 
 	block, err := aes.NewCipher(key[:32])
 	if err != nil {
-		return err
+		return
 	}
 
 	iv := key[32:]
@@ -167,7 +178,7 @@ func (serializer *SecureSerializer) Parse(serializedData string, obj interface{}
 
 	encryptedData, err := hex.DecodeString(encryptedDataHex)
 	if err != nil {
-		return err
+		return
 	}
 
 	decrypter.CryptBlocks(encryptedData, encryptedData)
